@@ -57,9 +57,7 @@
             
             ready: function() {
                 
-                var resource = this.$resource('api/comment/{id}');
-                
-                resource.get({}, function(comments){
+                this.$http.get('/api/comment', function(comments){
                     this.$set("comments", comments);
                 });
             },
