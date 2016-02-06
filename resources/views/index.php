@@ -15,13 +15,13 @@
                 <h4>Simple Guestbook</h4>
             </div>
 
-            <form v-on="submit: onCreate">
+            <form v-on:submit.prevent="create">
                 <div class="form-group">
-                    <input type="text" class="form-control input-sm" name="author" v-model="author" placeholder="Name">
+                    <input type="text" class="form-control input-sm" name="author" v-model="newComment.author" placeholder="Name">
                 </div>
 
                 <div class="form-group">
-                    <input type="text" class="form-control input-sm" name="text" v-model="text" placeholder="Put here your text">
+                    <input type="text" class="form-control input-sm" name="text" v-model="newComment.text" placeholder="Put here your text">
                 </div>
 
                 <div class="form-group text-right">   
@@ -29,15 +29,16 @@
                 </div>
             </form>
 
-             <div class="comment" v-repeat="comment: comments">
+             <div class="comment" v-for="comment in comments">
                 <h3>Comment #{{ comment.id }} <small>by {{ comment.author }}</h3>
                 <p>{{ comment.text }}</p>
-                <p><span class="btn btn-primary text-muted" v-on="click: onDelete(comment)">Delete</span></p>
+                <p><span class="btn btn-primary text-muted" @click="onDelete(comment)">Delete</span></p>
             </div>
         </div>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
-    <script src="//cdnjs.cloudflare.com/ajax/libs/vue/0.12.1/vue.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/vue/1.0.16/vue.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue-resource/0.7.0/vue-resource.min.js"></script>
     <script>
         new Vue({
             el: '#guestbook',
@@ -45,49 +46,38 @@
             data: {
                 comments: [],
                 text: '',
-                author: ''
+                author: '',
+                id: '',
+                newComment: {
+                    text: '',
+                    author: '',
+                    id: ''
+                }
             },
             
             ready: function() {
-                this.getMessages();
+                
+                var resource = this.$resource('api/comment/{id}');
+                
+                resource.get({}, function(comments){
+                    this.$set("comments", comments);
+                });
             },
             
             methods: {
-                getMessages: function() {
-                    $.ajax({
-                      context: this,
-                      url: "/api/comment",
-                      success: function (result) {
-                          this.$set("comments", result)
-                      }
-                    })
-                },
                 
-                onCreate: function(e) {
-                    e.preventDefault()
-                    $.ajax({
-                       context: this,
-                       type: "POST",
-                       data: {
-                           author: this.author,
-                           text: this.text
-                       },
-                       url: "/api/comment",
-                       success: function(result) {
-                           this.comments.push(result);
-                           this.author = '';
-                           this.text = '';
-                       }
-                    })
+                create: function() {
+                   var comment = this.newComment;
+                   this.$http.post('/api/comment', comment, function(data){
+                   this.comments.push(data);
+                   this.newComment = { text: '', author: '', id: '' };
+                   });
                 },
                 
                 onDelete: function (comment) {
-                    $.ajax({
-                        context: comment,
-                        type: "DELETE",
-                        url: "/api/comment/" + comment.id,
-                    })
-                    this.comments.$remove(comment);
+                    this.$http.delete('/api/comment/' + comment.id, function(){
+                        this.comments.$remove(comment);
+                    });
                 }
             }
         })
